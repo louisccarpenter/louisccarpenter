@@ -2,7 +2,7 @@ import numpy as np
 import statsmodels.formula.api as smf
 import pandas as pd
 
-df1 = pd.read_csv("/dbfs/FileStore/shared_uploads/Louis.Carpenter@vistaprint.com/t12_top10_combo-1.csv")
+df1 = pd.read_csv("/dbfs/FileStore/shared_uploads/Louis.Carpenter@xx.com/t12_top10_combo-1.csv")
 df1['aiv'] = df1['order_total']/df1['items']
 df1['aiq'] = df1['items']/df1['q']
 
