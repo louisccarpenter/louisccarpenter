@@ -1,0 +1,23 @@
+import numpy as np
+import statsmodels.formula.api as smf
+import pandas as pd
+
+df1 = pd.read_csv("/dbfs/FileStore/shared_uploads/Louis.Carpenter@vistaprint.com/t12_top10_combo-1.csv")
+df1['aiv'] = df1['order_total']/df1['items']
+df1['aiq'] = df1['items']/df1['q']
+
+
+weight= df1[df1['type']=='Paper Weight']
+size= df1[df1['type']=='Size']
+
+t6= df1[df1['month']>8]
+t3= df1[df1['month']>11]
+
+T=len(x)
+x.index=pd.date_range(start='3/1/2021', periods=T, freq='D').date
+
+x['units_diff'] =x['units'].diff()
+x['lag1'] = x['units'].shift(1)
+
+x = x.dropna()
+reg= smf.ols(formula= 'np.log(q)~ ((np.log(price_unit)*(product+aiq)))+units_diff+mon+tue+wed+thu+fri+sat+discount+t+week+feb+mar+apr+may+jun+jul+aug+sep+oct+nov+dec+year -1', data=x)
