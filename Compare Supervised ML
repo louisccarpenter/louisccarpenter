@@ -1,0 +1,289 @@
+!pip install lightgbm
+!{sys.executable} -m pip install xgboost
+
+import pandas as pd
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.metrics import mean_squared_error
+
+df1 = pd.read_csv("/dbfs/FileStore/shared_uploads/Louis.Carpenter@xx.com/)
+df1['t'] = np.linspace(0,len(df1),len(df1))
+df1['lag1']=df1['bookings'].shift(1)
+df1['lag2']=df1['bookings'].shift(2)
+df1['lag3']=df1['bookings'].shift(3)
+df1['lag4']=df1['bookings'].shift(4)
+df1['lag5']=df1['bookings'].shift(5)
+df1['lag6']=df1['bookings'].shift(6)
+df1['lag7']=df1['bookings'].shift(7)
+df1['lag7']=df1['bookings'].shift(7)
+
+df1['diff']=df1['bookings'].diff()
+data=df1
+data
+
+X=data[['year', 'month', 'week', 'day', 'discount', 't','lag1', 'lag2', 'lag3', 'lag4', 'lag5', 'lag6', 'lag7']]
+y=data[['bookings']]
+X = np.nan_to_num(X)
+y = np.nan_to_num(y)
+
+from sklearn.model_selection import train_test_split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state = 12345, shuffle=False)
+
+
+
+from statsmodels.graphics.tsaplots import plot_pacf
+from statsmodels.graphics.tsaplots import plot_acf
+plot_acf(y_train, lags = 20)
+plot_pacf(y_train, lags = 20)
+plt.show()
+
+from sklearn.neighbors import KNeighborsRegressor
+my_dt = KNeighborsRegressor()
+my_dt.fit(X_train, y_train)
+import numpy as np
+fcst = my_dt.predict(np.array(X_test))
+from sklearn.metrics import r2_score
+from sklearn.model_selection import GridSearchCV
+my_knn = GridSearchCV(KNeighborsRegressor(),
+                     {'n_neighbors': [2,4,6,8,10,12]}, scoring='r2', n_jobs = -1)
+
+my_knn.fit(np.array(X_train), np.array(y_train))
+print(r2_score(np.array(y_test), np.array(my_knn.predict(X_test))), my_knn.best_estimator_)
+knn_train_rmse= mean_squared_error(np.array(y_train),np.array(my_knn.predict(X_train)), squared=False)
+knn_test_rmse= mean_squared_error(np.array(y_test),np.array(my_knn.predict(X_test)), squared=False)
+
+plt.figure(figsize=(20,20))
+plt.plot(np.array(y_test))
+plt.plot(np.array(my_knn.predict(X_test)))
+plt.legend(['actuals', 'forecast'])
+plt.ylabel('VGP')
+plt.xlabel('Steps in Test Data')
+plt.show
+
+knn_model_results = pd.DataFrame(
+    {
+    "model": "KNN",  
+    "rmse_train": [knn_train_rmse], 
+    "rmse_test": [knn_test_rmse],
+    })
+knn_model_results
+
+from sklearn.ensemble import RandomForestRegressor
+my_rf= RandomForestRegressor()
+my_rf.fit(X_train, y_train)
+fcst = my_rf.predict(X_test)
+from sklearn.metrics import r2_score
+
+from sklearn.model_selection import GridSearchCV
+my_rf = GridSearchCV(RandomForestRegressor(),
+                    {'max_features':[0.65, .7, .75, .8, .85, .9, .95],
+                    'n_estimators': [10,50,100,250,500,750,1000]},
+                    scoring = 'r2', n_jobs= -1)
+my_rf.fit(X_train, y_train)
+print(r2_score((np.array(y_test)), np.array(my_rf.predict(X_test))))
+print(my_rf.best_params_)
+import matplotlib.pyplot as plt
+plt.figure(figsize=(20,20))
+
+rf_train_rmse= mean_squared_error(np.array(y_train),np.array(my_rf.predict(X_train)), squared=False)
+rf_test_rmse= mean_squared_error(np.array(y_test),np.array(my_rf.predict(X_test)), squared=False)
+
+plt.plot(np.array(fcst))
+plt.plot(np.array(y_test))
+plt.legend(['actuals', 'xgb'])
+plt.ylabel('Bookings')
+plt.xlabel('Steps in Test Data')
+plt.show
+
+rf_model_results = pd.DataFrame(
+    {
+    "model": "Random Forest",  
+    "rmse_train": [rf_train_rmse], 
+    "rmse_test": [rf_test_rmse],
+    })
+
+results = pd.concat([rf_model_results, knn_model_results], axis=0)
+results
+
+from lightgbm import LGBMRegressor
+from sklearn.metrics import r2_score
+import sys
+
+#from xgboost import XGBRegressor
+#my_xgb= XGBRegressor()
+#my_xgb.fit(X_train, y_train)
+#xgb_fcst = my_xgb.predict(X_test)
+#print(r2_score((np.array(y_test)), np.array(xgb_fcst)))
+
+my_lgbm= LGBMRegressor()
+my_lgbm.fit(X_train, y_train)
+lgbm_fcst=my_lgbm.predict(X_test)
+print(r2_score((np.array(y_test)), np.array(lgbm_fcst)))
+
+
+light_train_rmse= mean_squared_error(np.array(y_train),np.array(my_lgbm.predict(X_train)), squared=False)
+light_test_rmse= mean_squared_error(np.array(y_test),np.array(my_lgbm.predict(X_test)), squared=False)
+
+import matplotlib.pyplot as plt
+plt.figure(figsize=(20,20))
+plt.plot(np.array(y_test))
+#plt.plot(np.array(xgb_fcst))
+plt.plot(np.array(lgbm_fcst))
+plt.legend(['actuals', 'xgb', 'lgbm'])
+plt.ylabel('Bookings')
+plt.xlabel('Steps in Test Data')
+plt.show
+
+lgbm_model_results = pd.DataFrame(
+    {
+    "model": "Light Gradient Boost",  
+    "rmse_train": [light_train_rmse], 
+    "rmse_test": [light_test_rmse]
+    })
+results = pd.concat([results, lgbm_model_results], axis=0)
+results
+
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import r2_score
+import statsmodels.api as sm
+my_lm=LinearRegression()
+my_lm.fit(X=X_train, y=y_train)
+
+train_fcst= my_lm.predict(X_train)
+test_fcst = my_lm.predict(X_test)
+train_r2 = r2_score(y_train, train_fcst)
+test_r2=r2_score(y_test,test_fcst)
+print(train_r2,test_r2)
+
+lm_train_rmse= mean_squared_error(np.array(y_train),np.array(my_lm.predict(X_train)), squared=False)
+lm_test_rmse= mean_squared_error(np.array(y_test),np.array(my_lm.predict(X_test)), squared=False)
+
+
+import matplotlib.pyplot as plt
+plt.figure(figsize=(20,20))
+plt.plot((test_fcst))
+
+plt.plot((y_test))
+plt.legend(['y_test', 'test_fcst'])
+plt.ylabel('Bookings')
+plt.xlabel('Steps in Test Data')
+plt.show
+
+lm_model_results = pd.DataFrame(
+    {
+    "model": "Linear Regression",  
+    "rmse_train": [lm_train_rmse], 
+    "rmse_test": [lm_test_rmse]
+    })
+results = pd.concat([results, lm_model_results], axis=0)
+results
+
+from sklearn.tree import DecisionTreeRegressor
+my_dt= DecisionTreeRegressor(random_state=12345)
+my_dt.fit(X_train, y_train)
+print(r2_score(list(y_test), list(my_dt.predict(X_test))))
+from sklearn.model_selection import GridSearchCV
+my_dt = GridSearchCV(DecisionTreeRegressor(random_state=44),
+                    {'min_samples_split':list(range(1,50,2)),
+                    'max_features': [0.6, 0.7, 0.8, 0.9, 1],
+                    'criterion': ['mse','mae']},
+                    scoring = 'r2', n_jobs= -1)
+my_dt.fit(X_train, y_train)
+print(r2_score(list(y_test), list(my_dt.predict(X_test))))
+print(my_dt.best_estimator_)
+
+dt_train_rmse= mean_squared_error(np.array(y_train),np.array(my_dt.predict(X_train)), squared=False)
+dt_test_rmse= mean_squared_error(np.array(y_test),np.array(my_dt.predict(X_test)), squared=False)
+
+import matplotlib.pyplot as plt
+plt.figure(figsize=(20,20))
+fcst=my_dt.predict(X_test)
+plt.plot((y_test))
+plt.plot((fcst))
+plt.legend(['y_test', 'test_fcst'])
+plt.ylabel('Bookings')
+plt.xlabel('Steps in Test Data')
+plt.show
+
+from sklearn.tree import plot_tree
+plot_tree(my_dt.best_estimator_, max_depth=2)
+plt.show()
+
+dt_model_results = pd.DataFrame(
+    {
+    "model": "Decision Tree",  
+    "rmse_train": [dt_train_rmse], 
+    "rmse_test": [dt_test_rmse]
+    })
+results = pd.concat([results, dt_model_results], axis=0)
+
+from sklearn.preprocessing import PolynomialFeatures
+
+# polynomial degree 2
+poly = PolynomialFeatures(2)
+
+X_train_poly = poly.fit_transform(X_train)
+X_test_poly = poly.fit_transform(X_test)
+pm = LinearRegression()
+pm.fit(X_train_poly,y_train)
+LinearRegression()
+# Training data
+pred_train = pm.predict(X_train_poly)
+rmse_train = mean_squared_error(y_train, 
+                                pred_train, 
+                                squared=False)
+
+# Test data
+pred_test = pm.predict(X_test_poly)
+rmse_test =mean_squared_error(y_test, 
+                              pred_test, 
+                              squared=False)
+
+# Save model results
+model_results_qm = pd.DataFrame(
+    {
+    "model": "Quadratic Model (pm)",  
+    "rmse_train": [rmse_train], 
+    "rmse_test": [rmse_test],
+    })
+
+
+results = pd.concat([results, model_results_qm], axis=0)
+
+from sklearn.preprocessing import PolynomialFeatures
+
+# polynomial degree 3
+poly = PolynomialFeatures(3)
+
+X_train_poly = poly.fit_transform(X_train)
+X_test_poly = poly.fit_transform(X_test)
+pm = LinearRegression()
+pm.fit(X_train_poly,y_train)
+LinearRegression()
+# Training data
+pred_train = pm.predict(X_train_poly)
+rmse_train = mean_squared_error(y_train, 
+                                pred_train, 
+                                squared=False)
+
+# Test data
+pred_test = pm.predict(X_test_poly)
+rmse_test =mean_squared_error(y_test, 
+                              pred_test, 
+                              squared=False)
+
+# Save model results
+model_results_cm = pd.DataFrame(
+    {
+    "model": "Cubic Model (pm)",  
+    "rmse_train": [rmse_train], 
+    "rmse_test": [rmse_test],
+    })
+
+
+results = pd.concat([results, model_results_cm], axis=0)
+
+results['delta'] = results['rmse_train'] - results['rmse_test']
+results['%']=results['delta']/results['rmse_test']
+results
